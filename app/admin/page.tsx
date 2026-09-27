@@ -1,4 +1,4 @@
- 'use client'
+'use client'
 
 import { createClient } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
@@ -48,6 +48,16 @@ export default function AdminPage() {
   const [blockStart, setBlockStart] = useState('')
   const [blockEnd, setBlockEnd] = useState('')
   const [blockReason, setBlockReason] = useState('')
+
+  const timeOptions = useMemo(() => {
+    const result: string[] = []
+    for (let minutes = 9 * 60; minutes <= 20 * 60; minutes += 15) {
+      const h = String(Math.floor(minutes / 60)).padStart(2, '0')
+      const m = String(minutes % 60).padStart(2, '0')
+      result.push(`${h}:${m}`)
+    }
+    return result
+  }, [])
 
   async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession()
@@ -154,8 +164,9 @@ export default function AdminPage() {
       hour: '2-digit',
       minute: '2-digit',
     })
-    const time = prompt('Nouvelle heure (HH:MM)', suggested)
+    const time = prompt('Nouvelle heure (HH:MM, par pas de 15 minutes)', suggested)
     if (!time) return
+    if (!timeOptions.includes(time)) return alert('Choisissez une heure par pas de 15 minutes entre 09:00 et 20:00.')
     const { error } = await supabase.rpc('admin_move_booking', {
       p_booking_id: id,
       p_new_start: localIso(time),
@@ -166,6 +177,7 @@ export default function AdminPage() {
 
   async function addBlock() {
     if (!blockStart || !blockEnd) return
+    if (blockEnd <= blockStart) return alert("L'heure de fin doit être après l'heure de début.")
     const { error } = await supabase.rpc('admin_block_period', {
       p_starts_at: localIso(blockStart),
       p_ends_at: localIso(blockEnd),
@@ -262,15 +274,24 @@ export default function AdminPage() {
               </option>
             ))}
           </select>
-          <input type="time" step="900" value={startAt} onChange={e => setStartAt(e.target.value)} />
+          <select value={startAt} onChange={e => setStartAt(e.target.value)}>
+            <option value="">Heure</option>
+            {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
+          </select>
           <button className="primary" onClick={createManualBooking}>Ajouter</button>
         </div>
 
         <div>
           <h2>Bloquer du temps</h2>
           <div className="timeRow">
-            <input type="time" step="900" value={blockStart} onChange={e => setBlockStart(e.target.value)} />
-            <input type="time" step="900" value={blockEnd} onChange={e => setBlockEnd(e.target.value)} />
+            <select value={blockStart} onChange={e => setBlockStart(e.target.value)}>
+              <option value="">Début</option>
+              {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
+            </select>
+            <select value={blockEnd} onChange={e => setBlockEnd(e.target.value)}>
+              <option value="">Fin</option>
+              {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
+            </select>
           </div>
           <input placeholder="Raison (facultatif)" value={blockReason} onChange={e => setBlockReason(e.target.value)} />
           <button className="primary" onClick={addBlock}>Bloquer</button>
