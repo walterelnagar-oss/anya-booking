@@ -83,6 +83,7 @@ export default function ManageBookingPage() {
     if (error) setError('Ce rendez-vous ne peut plus être annulé.')
     else {
       setMessage('Votre rendez-vous a été annulé.')
+      void supabase.functions.invoke('booking-email', { body: { action: 'cancelled', token } })
       await loadBooking()
     }
   }
@@ -102,6 +103,7 @@ export default function ManageBookingPage() {
     setMessage('Votre rendez-vous a été déplacé.')
     setSlots([])
     setDate('')
+    void supabase.functions.invoke('booking-email', { body: { action: 'rescheduled', token } })
     await loadBooking()
   }
 
